@@ -9,10 +9,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.IOException;
-
-import static com.lee.dexdiff.utils.DiffUtils.diff;
+import java.io.*;
 
 /**
  * Created by jianglee on 7/30/16.
@@ -20,7 +17,7 @@ import static com.lee.dexdiff.utils.DiffUtils.diff;
 public class DiffTest extends Assert {
 
     @BeforeClass
-    public static void init(){
+    public static void init() {
         Logger.setLevel(3);
     }
 
@@ -29,7 +26,7 @@ public class DiffTest extends Assert {
         try {
             String oldFile = "src/test/resource/1.dex";
             String rewriteFile = DiffUtils.rewriteDex(oldFile);
-            assertNull(diff(oldFile, rewriteFile, null));
+            assertNull(DiffUtils.diff(oldFile, rewriteFile, null));
             new File(rewriteFile).delete();
         } catch (IOException e) {
             fail(stringify(e));
@@ -55,7 +52,7 @@ public class DiffTest extends Assert {
         } catch (IOException e) {
             fail(stringify(e));
         } finally {
-            if(null != keepFile){
+            if (null != keepFile) {
                 keepFile.delete();
             }
         }
@@ -80,19 +77,49 @@ public class DiffTest extends Assert {
             assertEquals("keep class is wrong.", 1, keepFileNode.clzs.size());
 
             deleteFile = new File(ret.second);
-            DexFileNode deleteFileNode = new DexFileNode();
-            DexFileReader deleteReader = new DexFileReader(deleteFile);
-            deleteReader.accept(deleteFileNode);
-            assertNotNull(deleteFileNode.clzs);
-            assertEquals("delete class is wrong.", 1, deleteFileNode.clzs.size());
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(deleteFile)));
+            int count = 0;
+            while (reader.readLine() != null) {
+                ++count;
+            }
+            assertEquals("delete class is wrong.", 1, count);
         } catch (IOException e) {
             fail(stringify(e));
         } finally {
-            if(null != keepFile){
+            if (null != keepFile) {
                 keepFile.delete();
             }
-            if(null != deleteFile){
+            if (null != deleteFile) {
                 deleteFile.delete();
+            }
+        }
+    }
+
+    @Test
+    public void testPatch() {
+        String keepFile = null;
+        String deleteFile = null;
+        String newDex = null;
+        try {
+            String oldFile = "src/test/resource/1.dex";
+            String newFile = "src/test/resource/3.dex";
+            TwoTuple<String, String> ret = DiffUtils.diff(oldFile, newFile, null);
+            assertNotNull(ret);
+            keepFile = ret.first;
+            deleteFile = ret.second;
+            newDex = DiffUtils.patch(oldFile, ret.first, ret.second);
+            assertNull(DiffUtils.diff(newFile, newDex, null));
+        } catch (IOException e) {
+            fail(stringify(e));
+        } finally {
+            if (null != keepFile) {
+                new File(keepFile).delete();
+            }
+            if (null != deleteFile) {
+                new File(deleteFile).delete();
+            }
+            if (null != newDex) {
+                new File(newDex).delete();
             }
         }
     }

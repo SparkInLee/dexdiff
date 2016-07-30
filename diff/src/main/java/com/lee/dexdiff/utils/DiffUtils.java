@@ -1,8 +1,6 @@
 package com.lee.dexdiff.utils;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
 import com.googlecode.d2j.dex.writer.DexFileWriter;
@@ -55,8 +53,19 @@ public final class DiffUtils {
                 ret.first = keepFile;
             }
             if (deleteValues.size() > 0) {
-                String deleteFile = uniqueFileName("delete.dex", ".");
-                DiffDexFileWriter.getInstance().build(deleteValues, new File(deleteFile));
+                String deleteFile = uniqueFileName("delete.data", ".");
+                PrintWriter deleteWriter = null;
+                try {
+                    deleteWriter = new PrintWriter(new OutputStreamWriter(new FileOutputStream(deleteFile)));
+                    for (ClassDefItem item : deleteValues) {
+                        deleteWriter.println(item.clazz.descriptor.stringData.string);
+                    }
+                    deleteWriter.flush();
+                } finally {
+                    if (null != deleteWriter) {
+                        deleteWriter.close();
+                    }
+                }
                 ret.second = deleteFile;
             }
             return ret;
@@ -64,6 +73,58 @@ public final class DiffUtils {
             Logger.i(TAG, String.format("%s is same with %s.", newDexFile, oldDexFile));
             return null;
         }
+    }
+
+    public static String patch(String oldDex, String keepDex, String deleteData) throws IOException {
+        if (null == oldDex) {
+            throw new IllegalArgumentException("old dex can not be null.");
+        }
+
+        List<ClassDefItem> oldClasses = new ArrayList<>();
+        DexFileWriter oldWriter = new DexFileWriter();
+        DexFileReader reader = new DexFileReader(new File(oldDex));
+        reader.accept(oldWriter);
+        oldClasses.addAll(oldWriter.cp.classDefs.values());
+
+        Map<String, ClassDefItem> replaceClassMap = new HashMap<>();
+        if (null != keepDex) {
+            DexFileWriter keepWriter = new DexFileWriter();
+            reader = new DexFileReader(new File(keepDex));
+            reader.accept(keepWriter);
+            for (ClassDefItem item : keepWriter.cp.classDefs.values()) {
+                replaceClassMap.put(item.clazz.descriptor.stringData.string, item);
+            }
+        }
+
+        Set<String> deleteClassSet = new HashSet<>();
+        if (null != deleteData) {
+            BufferedReader deleteReader = new BufferedReader(new InputStreamReader(new FileInputStream(deleteData)));
+            String klass;
+            while ((klass = deleteReader.readLine()) != null) {
+                deleteClassSet.add(klass);
+            }
+        }
+
+        String newDex = null;
+        if (replaceClassMap.size() > 0 || deleteClassSet.size() > 0) {
+            newDex = DiffUtils.uniqueFileName("new.dex", ".");
+            List<ClassDefItem> newClasses = new ArrayList<>();
+            for (ClassDefItem item : oldClasses) {
+                String itemClass = item.clazz.descriptor.stringData.string;
+                if (!deleteClassSet.contains(itemClass) && !replaceClassMap.containsKey(itemClass)) {
+                    newClasses.add(item);
+                }
+            }
+            for (ClassDefItem item : replaceClassMap.values()) {
+                newClasses.add(item);
+            }
+            DiffDexFileWriter.getInstance().build(newClasses, new File(newDex));
+            Logger.i(TAG, "construct new dex successfully.");
+        } else {
+            Logger.i(TAG, "there no difference.");
+        }
+
+        return newDex;
     }
 
     public static String rewriteDex(String oldDex) throws IOException {
@@ -75,7 +136,7 @@ public final class DiffUtils {
         return rewriteDex;
     }
 
-    private static String uniqueFileName(String fileName, String split) {
+    public static String uniqueFileName(String fileName, String split) {
         File file = new File(fileName);
         int suffix = 1;
         while (file.exists()) {
