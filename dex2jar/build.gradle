@@ -1,0 +1,17 @@
+apply plugin: 'java'
+
+configurations {
+    deployerJars
+}
+
+apply plugin: 'maven'
+
+uploadArchives {
+    repositories.mavenDeployer {
+        configuration = configurations.deployerJars
+        pom.groupId = "com.googlecode.d2j"
+        pom.artifactId = "dex2jar"
+        pom.version = "1.0.0-alpha1"
+        repository(url: "file://${rootProject.projectDir}/repos/diff")
+    }
+}

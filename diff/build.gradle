@@ -1,0 +1,22 @@
+apply plugin: 'java'
+
+configurations {
+    deployerJars
+}
+
+dependencies {
+    compile project(':dex2jar')
+    testCompile "junit:junit:4.12"
+}
+
+apply plugin: 'maven'
+
+uploadArchives {
+    repositories.mavenDeployer {
+        configuration = configurations.deployerJars
+        pom.groupId = "com.lee"
+        pom.artifactId = "diff"
+        pom.version = "1.0.0-alpha1"
+        repository(url: "file://${rootProject.projectDir}/repos/diff")
+    }
+}

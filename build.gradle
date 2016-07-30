@@ -1,0 +1,25 @@
+allprojects {
+    repositories {
+        mavenCentral()
+    }
+}
+
+task clean {
+    File repo = new File("repos");
+    if (repo.exists() && repo.isDirectory()) {
+        repo.listFiles().each {
+            deleteFile(it)
+        }
+    }
+}
+
+void deleteFile(File file) {
+    if (null != file) {
+        if (file.isDirectory()) {
+            file.listFiles().each {
+                deleteFile(it)
+            }
+        }
+        file.delete()
+    }
+}

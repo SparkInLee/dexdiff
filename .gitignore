@@ -1,0 +1,6 @@
+.DS_Store
+.idea
+.gradle
+repos
+diff/build
+dex2jar/build

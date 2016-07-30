@@ -1,0 +1,4 @@
+rootProject.name = 'dexdiff'
+include 'dex2jar'
+include 'diff'
+
